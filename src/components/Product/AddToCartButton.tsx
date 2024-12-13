@@ -1,16 +1,17 @@
 'use client'
 
+import { SDK } from '@/utils/sdk'
+import { setNumCartItems } from '@/utils/store'
+
 export function AddToCartButton({ productId }: { productId: string }) {
   const addToCart = async () => {
-    await fetch('/api/cart', {
+    const response = await fetch('/api/cart', {
       method: 'POST',
       body: JSON.stringify({ productId }),
     })
+    const data = await(response.json() as Promise<{ cart: SDK.Cart }>)
 
-    // TODO: This alert should be replaced with something better.
-    alert(
-      'Added to cart! Refresh the page to see the number change in the header. (hint: please remove me)',
-    )
+    setNumCartItems(Object.values(data.cart).reduce((a: number, b: number) => a + b, 0))
   }
 
   return (

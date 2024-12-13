@@ -1,42 +1,84 @@
 'use client'
 
 import { SDK } from '@/utils/sdk'
-import { useEffect, useState } from 'react'
+import { useSuspenseInfiniteQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { GridList } from './List/GridList'
+import { VerticalList } from './List/VerticalList'
+import ToggleButton from './ToggleButton'
+
+
+const fetchProducts = async ({ pageParam = 0 }) => SDK.getAllProducts({ limit: 10, offset: 10 * pageParam })
 
 export function ProductGrid() {
-  const [products, setProducts] = useState<SDK.Product[]>([])
+  const [viewType, setViewType] = useState<'grid' | 'list'>('grid')
 
-  /**
-   * This is poor man's suspense, please use something better (like react-query, server components+suspense, etc.)
-   */
-  useEffect(() => {
-    SDK.getAllProducts({ limit: 10, offset: 0 }).then(setProducts)
-  }, [])
+  
+  const { data, fetchNextPage, hasNextPage, fetchStatus } = useSuspenseInfiniteQuery({
+    queryKey: ['product-grid'],
+    queryFn: fetchProducts,
+    initialPageParam: 0,
+    getNextPageParam: (_lastPage, lastPages) => lastPages.length ?? undefined,
+
+  });
+
+  const handleViewChange = (state: boolean) => {
+    setViewType(state ? 'list' : 'grid')
+  }
+
+  const gridProduct = (product: SDK.Product) => (
+      <div key={product.id}>
+        <img src={product.image} alt="Placeholder" className="w-24 h-24 object-cover rounded-lg mr-4"></img>
+        
+        <div>
+          <div className="font-semibold text-lg">{product.name}</div>
+          <div className="font-semibold text-sm">{product.shortDescription}</div>
+          <div className="text-white-600 text-sm py-2">{product.price} kr</div>
+        </div>
+      </div>
+    )
+
+  const listProduct = (product: SDK.Product) => (
+    <li key={product.id} className="flex items-start space-x-4">
+      <img src={product.image} alt="Placeholder" className="w-24 h-24 object-cover rounded-lg mr-4"></img>
+      <div>
+        <div className="font-semibold text-lg">{product.name}</div>
+        <div className="font-semibold text-sm">{product.shortDescription}</div>
+        <div className="text-white-600 text-sm py-2">{product.price} kr</div>
+      </div>
+    </li>
+  )
 
   return (
     <div>
-      {/* Do your magic here */}
-      <div>
-        {products.map((product) => (
-          <div key={product.id}>
-            <div>{product.name}</div>
-            <div>{product.price} kr</div>
-          </div>
-        ))}
-      </div>
-
-      {/* This below can be removed */}
-      {products.length > 0 && (
-        <div className="prose prose-pre:bg-green-100 dark:prose-pre:bg-green-900 prose-pre:text-green-900 dark:prose-pre:text-green-100 mt-8 border-t pt-4">
-          <h3 className="text-green-900 dark:text-green-100">
-            Data structure <i>(this can be removed)</i>
-          </h3>
-
-          <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-            {JSON.stringify([products[0]], null, 2)}
-          </pre>
-        </div>
+      <ToggleButton onToggle={handleViewChange} label='Toggle view' className="mb-4" />
+      {viewType === 'grid' && (
+        <GridList>
+          {data?.pages.map((page) => (
+            page.map((product) =>
+              gridProduct(product)
+            ))
+          )}
+        </GridList>
       )}
+
+      {viewType === 'list' && (
+        <VerticalList>
+          {data?.pages.map((page) => (
+            page.map((product) =>
+              listProduct(product)
+            ))
+          )}
+        </VerticalList>
+      )}
+
+      {fetchStatus === 'fetching' ?
+      <div className="text-center mt-4">Loading more content...</div> :
+      <button className="bg-blue-600 text-white font-semibold rounded-lg px-6 py-2 mt-4 hover:bg-blue-700 focus:outline-none"
+        disabled={!hasNextPage} onClick={() => fetchNextPage()}>
+        Load More
+      </button>
+      }
     </div>
   )
 }

@@ -4,6 +4,8 @@ import type { Metadata } from 'next'
 import { Manrope } from 'next/font/google'
 import localFont from 'next/font/local'
 import './globals.css'
+import React from 'react'
+import { Provider } from '@/components/Providers/TanstackProvider'
 
 const manrope = Manrope({
   subsets: ['latin'],
@@ -32,15 +34,15 @@ export default async function RootLayout(
         <link rel="icon" href="/favicon.svg" sizes="any" />
       </head>
       <body className={[manrope.className, futuraPT.variable].join(' ')}>
-        <Header />
-
-        <div className="container mx-auto flex gap-8">
-          <main className="py-8 flex-1">
-            <div className="container mx-auto">{props.children}</div>
-          </main>
-
-          <Instructions />
-        </div>
+        <Provider>
+          <Header />
+          <div className="container mx-auto flex gap-8">
+            <main className="py-8 flex-1">
+              {props.children}
+            </main>
+            <Instructions />
+          </div>
+        </Provider>
       </body>
     </html>
   )
